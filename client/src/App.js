@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import LoginPage from './pages/LoginPage';
@@ -9,7 +9,7 @@ import Dashboard from './pages/Dashboard';
 async function fetchUser(token) {
   const response = await fetch('http://localhost:8000/users/me/', {
     headers: {
-      'Authorization': `Token ${token}`, // префикс "Token " должен совпадать с серверной настройкой
+      'Authorization': `Token ${token}`,
       'Content-Type': 'application/json',
     },
   });
@@ -20,24 +20,55 @@ async function fetchUser(token) {
   return response.json();
 }
 
-
 function App() {
-  const [token, setToken] = useState(null); // null если не авторизован
+  const [token, setToken] = useState(localStorage.getItem('token'));
   const [user, setUser] = useState(null);
 
-// После логина
-async function handleLogin(token) {
-  setToken(token);
-  const userData = await fetchUser(token); // получить данные пользователя
-  setUser(userData);
-}
+  // Загружаем пользователя при наличии токена
+  useEffect(() => {
+    if (token) {
+      fetchUser(token).then(setUser).catch(() => {
+        localStorage.removeItem('token');
+        setToken(null);
+      });
+    }
+  }, [token]);
+
+  // После логина
+  async function handleLogin(userData) {
+    setToken(userData.token);
+    setUser(userData.user);
+    localStorage.setItem('token', userData.token);
+  }
+
+  function handleLogout() {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('token');
+  }
+
+  function handleRegister(token) {
+    setToken(token);
+    localStorage.setItem('token', token);
+    // После регистрации нужно также получить данные пользователя
+    fetchUser(token).then(setUser);
+  }
 
   return (
     <Router>
       <Routes>
-        <Route path="/" element={!token ? <LoginPage onLogin={setToken} /> : <Navigate to="/dashboard" />} />
-        <Route path="/register" element={!token ? <RegisterPage onRegister={setToken} /> : <Navigate to="/dashboard" />} />
-        <Route path="/dashboard" element={token ? <Dashboard user={user} token={token} onLogout={() => setToken(null)} /> : <Navigate to="/" />} />
+        <Route path="/login" element={
+          !token ? <LoginPage onLogin={handleLogin} /> : <Navigate to="/dashboard" />
+        } />
+        <Route path="/register" element={
+          !token ? <RegisterPage onRegister={handleRegister} /> : <Navigate to="/dashboard" />
+        } />
+        <Route path="/dashboard" element={
+          token ? <Dashboard user={user} token={token} onLogout={handleLogout} /> : <Navigate to="/login" />
+        } />
+        <Route path="/" element={
+          <Navigate to={token ? "/dashboard" : "/login"} />
+        } />
       </Routes>
     </Router>
   );

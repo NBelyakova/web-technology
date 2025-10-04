@@ -32,32 +32,34 @@ function Dashboard({ user, onLogout, token }) {
     fetchPosts();
   }, [token]);
 
-  // Добавление нового поста
-  async function addPost() {
-    if (!content.trim()) return;
+// Добавление нового поста
+async function addPost() {
+  if (!content.trim()) return;
 
-    const newPost = { author: user?.username, content };
-
-    try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Token ${token}` },
-        body: JSON.stringify(newPost),
-      });
-      if (!response.ok) throw new Error('Ошибка добавления поста');
-      const savedPost = await response.json();
-      setPosts([savedPost, ...posts]);
-      setContent('');
-    } catch (error) {
-      console.error(error);
-      alert('Не удалось добавить пост');
-    }
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Token ${token}`
+      },
+      body: JSON.stringify({ text: content }), // ← ДОБАВЬТЕ { } вокруг text: content
+    });
+    if (!response.ok) throw new Error('Ошибка добавления поста');
+    const savedPost = await response.json();
+    setPosts([savedPost, ...posts]);
+    setContent('');
+  } catch (error) {
+    console.error(error);
+    alert('Не удалось добавить пост');
   }
+}
+
 
   // Удаление поста
   async function deletePost(id) {
     try {
-      const response = await fetch(`${API_URL}/${id}`, {
+      const response = await fetch(`${API_URL}${id}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `Token ${token}` },
       });
@@ -80,10 +82,13 @@ function Dashboard({ user, onLogout, token }) {
     if (!content.trim()) return;
 
     try {
-      const response = await fetch(`${API_URL}/${editingPost.id}`, {
+      const response = await fetch(`${API_URL}${editingPost.id}/`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Token ${token}` },
-        body: JSON.stringify({ ...editingPost, content }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${token}`
+        },
+        body: JSON.stringify({text: content }),
       });
       if (!response.ok) throw new Error('Ошибка сохранения изменений');
       const updatedPost = await response.json();
@@ -135,10 +140,10 @@ function Dashboard({ user, onLogout, token }) {
         {posts.map(post => (
           <li key={post.id}>
             <p>{post.text}</p> 
-            {post.author === user.username && (
+            {(post.author === user.id || post.author_username === user.username) && (
               <>
-                <button onClick={() => startEdit(post)}>Редактировать</button>
-                <button onClick={() => deletePost(post.id)}>Удалить</button>
+              <button onClick={() => startEdit(post)}>Редактировать</button>
+              <button onClick={() => deletePost(post.id)}>Удалить</button>
               </>
             )}
           </li>

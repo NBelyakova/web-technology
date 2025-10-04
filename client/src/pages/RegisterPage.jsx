@@ -11,58 +11,62 @@ function RegisterPage({ onRegister }) {
   const API_REGISTER_URL = 'http://localhost:8000/register/'; 
   const API_AUTH_URL = 'http://localhost:8000/auth/';
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError(null);
+async function handleSubmit(e) {
+  e.preventDefault();
+  setError(null);
 
-    if (!username.trim() || !email.trim() || !password.trim()) {
-      setError('Пожалуйста, заполните все поля');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError('Пароли не совпадают');
-      return;
-    }
-
-    try {
-      const response = await fetch(API_REGISTER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password })
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        const errMsg = data.detail || JSON.stringify(data);
-        setError(`Ошибка регистрации: ${errMsg}`);
-        return;
-      }
-
-      // Регистрация прошла успешно, теперь логинимся для получения токена
-      const authResponse = await fetch(API_AUTH_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-
-      if (!authResponse.ok) {
-        const authData = await authResponse.json();
-        const errMsg = authData.detail || JSON.stringify(authData);
-        setError(`Ошибка логина после регистрации: ${errMsg}`);
-        return;
-      }
-
-      const authData = await authResponse.json();
-      if (authData.token) {
-        onRegister(authData.token);
-      } else {
-        setError('Не удалось получить токен авторизации после логина');
-      }
-
-    } catch (error) {
-      setError(`Ошибка сети: ${error.message}`);
-    }
+  if (!username.trim() || !email.trim() || !password.trim()) {
+    setError('Пожалуйста, заполните все поля');
+    return;
   }
+  if (password !== confirmPassword) {
+    setError('Пароли не совпадают');
+    return;
+  }
+
+  try {
+    // 1. Регистрация
+    const response = await fetch(API_REGISTER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password })
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      const errMsg = data.detail || JSON.stringify(data);
+      setError(`Ошибка регистрации: ${errMsg}`);
+      return;
+    }
+
+    // 2. Авторизация после успешной регистрации
+    const authResponse = await fetch(API_AUTH_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+
+    if (!authResponse.ok) {
+      const authData = await authResponse.json();
+      const errMsg = authData.detail || JSON.stringify(authData);
+      setError(`Ошибка логина после регистрации: ${errMsg}`);
+      return;
+    }
+
+    const authData = await authResponse.json();
+    console.log('Ответ авторизации:', authData); // ← для отладки
+    
+    // Исправляем получение токена
+    if (authData.token) {  // ← используем token (не access)
+      onRegister(authData.token);
+    } else {
+      setError('Не удалось получить токен авторизации после логина')
+    }
+
+  } catch (error) {
+    setError(`Ошибка сети: ${error.message}`);
+  }
+}
 
   return (
     <div>

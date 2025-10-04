@@ -50,7 +50,7 @@ function LoginPage({ onLogin }) {
       }
 
       const data = await response.json();
-      const token = data.token;
+      const token = data.access;
 
       localStorage.setItem('token', token);
 

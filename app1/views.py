@@ -47,9 +47,9 @@ class AuthView(APIView):
         password = request.data.get('password')
         user = authenticate(username=username, password=password)
         if user is not None:
-            refresh = RefreshToken.for_user(user)
+            token, created = Token.objects.get_or_create(user=user)
             return Response({
-                'token': str(refresh.access_token),
+                'token': token.key,  # ← простой токен
             })
         return Response({'detail': 'Неверный логин или пароль'}, status=status.HTTP_400_BAD_REQUEST)
     
